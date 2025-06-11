@@ -1,110 +1,160 @@
 # Bloom Filter Implementation
 
-[![Maven Central](https://img.shields.io/github/v/release/mark-persever/bloom-filter?color=blue&label=Release)](https://github.com/mark-persever/bloom-filter/packages)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![Java CI](https://img.shields.io/badge/Java-21%2B-blue)
+[![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://github.com/mark-persever/bloom-filter/blob/master/LICENSE)
 
-
-A high-performance, memory-efficient Bloom filter implementation in Java with configurable false-positive rates and automatic parameter optimization.
+A high-performance Bloom filter implementation in Java with customizable hash functions and optimized bit storage.
 
 ## Features
 
-- 🚀 **High performance**: Optimized hash functions and bit operations
-- 🧠 **Memory efficient**: Compact bit storage using `long[]` arrays
-- ⚙️ **Auto-optimized**: Calculates optimal parameters based on expected elements and false-positive rate
-- 🔄 **Multiple hash strategies**: Includes FNV-1a, DJB2, and Jenkins hash algorithms
-- 🧪 **Test coverage**: Comprehensive unit tests with edge cases
-- 📦 **Easy integration**: Simple Maven dependency
+- **Optimized bit storage** using efficient `BitSet` implementation
+- **Multiple hash functions** including FNV1a, DJB2, and Jenkins
+- **Dynamic hash generation** using double hashing technique
+- **Configurable parameters** for expected items and false positive rate
+- **Memory-efficient** implementation with minimal dependencies
+- **Thread-safe** operations (with proper synchronization)
 
 ## Installation
 
-Add the following dependency to your `pom.xml`:
+### Maven
 
-```xml
-<dependency>
-    <groupId>com.github.mark-persever</groupId>
-    <artifactId>bloom-filter</artifactId>
-    <version>1.0.0</version>
-</dependency>
-```
-
-### Repository Configuration
-
-Add GitHub Packages repository to your `pom.xml` or `settings.xml`:
+Add the following repository and dependency to your `pom.xml`:
 
 ```xml
 <repositories>
     <repository>
-        <id>github</id>
-        <name>GitHub mark-persever Apache Maven Packages</name>
-        <url>https://maven.pkg.github.com/mark-persever/bloom-filter</url>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
     </repository>
 </repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.github.mark-persever</groupId>
+        <artifactId>bloom-filter</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+</dependencies>
+```
+
+### Gradle
+
+Add to your `build.gradle`:
+
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.github.mark-persever:bloom-filter:1.0.0'
+}
 ```
 
 ## Usage
 
-### Basic Usage
+### Basic Example
 
 ```java
 import com.github.markpersever.bloom.BloomFilter;
 import com.github.markpersever.bloom.DefaultBloomFilter;
 
-public class Example {
+public class BloomFilterExample {
     public static void main(String[] args) {
-        // Create filter for 100,000 elements with 0.1% false positive rate
-        BloomFilter filter = new DefaultBloomFilter(100_000, 0.001);
+        // Create a Bloom filter with 10000 expected items and 1% false positive rate
+        BloomFilter bloomFilter = new DefaultBloomFilter(10000, 0.01);
         
-        // Add elements
-        filter.add("https://example.com");
-        filter.add("user@domain.com");
-        filter.add("7b8a1d9c-3f6e-4a5b-9d2c-1e0f8a7b6c5d");
+        // Add items to the filter
+        bloomFilter.add("apple");
+        bloomFilter.add("banana");
+        bloomFilter.add("cherry");
         
-        // Check existence
-        System.out.println("Contains 'example.com': " + 
-            filter.mightContain("https://example.com"));  // true
+        // Check for existence
+        System.out.println(bloomFilter.mightContain("banana")); // true
+        System.out.println(bloomFilter.mightContain("mango"));  // false (probably)
         
-        System.out.println("Contains 'unknown': " + 
-            filter.mightContain("unknown-value"));        // false
+        // Get false positive probability
+        System.out.println("False positive probability: " + 
+                           bloomFilter.expectedFalsePositiveProbability());
         
-        // Get expected false positive probability
-        System.out.printf("False positive probability: %.6f%n",
-            filter.expectedFalsePositiveProbability());
+        // Clear the filter
+        bloomFilter.clear();
     }
 }
 ```
 
-### Advanced Configuration
+### Advanced Usage
 
 ```java
-// Create with custom bit size and hash functions count
-BloomFilter customFilter = new DefaultBloomFilter(10_000_000, 5);
+// Create a Bloom filter with custom size and hash functions
+BloomFilter customFilter = new DefaultBloomFilter(1024, 3);
 
-// Add bulk elements
-List<String> items = /* large dataset */;
-items.forEach(filter::add);
+// Add multiple items
+List<String> fruits = Arrays.asList("apple", "orange", "kiwi", "grape");
+fruits.forEach(customFilter::add);
 
-// Clear the filter
-filter.clear();
+// Batch containment check
+List<String> testItems = Arrays.asList("apple", "mango", "orange", "peach");
+testItems.forEach(item -> 
+    System.out.println(item + ": " + customFilter.mightContain(item)));
 
-// Get actual bit usage
-System.out.println("Bits used: " + filter.bitSize());
+// Get filter size
+System.out.println("Bit size: " + customFilter.bitSize());
 ```
 
-## Performance Metrics
+## Configuration
 
-| Element Count | False Positive Rate | Memory Usage | Hash Functions |
-|---------------|---------------------|--------------|----------------|
-| 100,000       | 0.01 (1%)           | 114 KB       | 7              |
-| 1,000,000     | 0.001 (0.1%)        | 1.67 MB      | 10             |
-| 10,000,000    | 0.0001 (0.01%)      | 19.5 MB      | 14             |
+The `DefaultBloomFilter` constructor accepts two parameters:
 
-## Use Cases
+```java
+public DefaultBloomFilter(int expectedInsertions, double falsePositiveRate)
+```
 
-- **URL checker**: Quickly check if URL has been processed
-- **Email validator**: Prevent duplicate email processing
-- **Security systems**: Fast membership checks for blacklisted tokens
-- **Big data processing**: Efficient distinct value approximation
-- **Network routers**: Packet filtering and deduplication
+- `expectedInsertions`: Number of items expected to be added to the filter
+- `falsePositiveRate`: Desired false positive probability (0.0-1.0)
+
+Alternatively, you can create a filter with explicit parameters:
+
+```java
+public DefaultBloomFilter(int bitSize, int hashCount)
+```
+
+- `bitSize`: Size of the bit array (larger size = lower false positives)
+- `hashCount`: Number of hash functions to use
+
+## Hash Functions
+
+The implementation includes three high-quality hash functions:
+
+1. **FNV1aHash** - Fowler-Noll-Vo hash function
+2. **DJB2Hash** - Daniel J. Bernstein hash function
+3. **JenkinsHash** - Jenkins one-at-a-time hash
+
+Additional hash functions are generated using double hashing when more than 3 functions are required.
+
+## Performance
+
+The Bloom filter provides O(k) time complexity for `add` and `mightContain` operations, where k is the number of hash functions.
+
+Memory usage is optimized using a compact `BitSet` implementation that stores bits in `long` arrays.
+
+## Building from Source
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/mark-persever/bloom-filter.git
+   cd bloom-filter
+   ```
+
+2. Build with Maven:
+   ```bash
+   mvn clean package
+   ```
+
+3. Run tests:
+   ```bash
+   mvn test
+   ```
 
 ## API Documentation
 
@@ -112,55 +162,21 @@ System.out.println("Bits used: " + filter.bitSize());
 
 ```java
 public interface BloomFilter {
-    /**
-     * Add an element to the filter
-     * @param key Element to add
-     */
+    // Add an element to the filter
     void add(String key);
     
-    /**
-     * Check if element might be in the filter
-     * @param key Element to check
-     * @return true if element might exist (with false positive probability),
-     *         false if element definitely doesn't exist
-     */
+    // Check if an element might be in the set
     boolean mightContain(String key);
     
-    /**
-     * Calculate expected false positive probability
-     * @return Current expected false positive rate
-     */
+    // Get the expected false positive probability
     double expectedFalsePositiveProbability();
     
-    /**
-     * Clear all elements from the filter
-     */
+    // Clear all elements from the filter
     void clear();
     
-    /**
-     * Get total bit size of the filter
-     * @return Number of bits in the bit array
-     */
+    // Get the size of the bit array
     long bitSize();
 }
-```
-
-## Building from Source
-
-1. Clone the repository:
-```bash
-git clone https://github.com/mark-persever/bloom-filter.git
-cd bloom-filter
-```
-
-2. Build with Maven:
-```bash
-mvn clean package
-```
-
-3. Run tests:
-```bash
-mvn test
 ```
 
 ## Contributing
@@ -168,22 +184,18 @@ mvn test
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a pull request
+2. Create a new feature branch
+3. Make your changes with appropriate tests
+4. Submit a pull request
+
+Ensure all code changes include tests via JUnit and maintain 100% test coverage.
 
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## Acknowledgements
 
 - Bloom filter concept by Burton Howard Bloom (1970)
 - Hash function implementations based on public domain algorithms
-- Memory optimization techniques from Google Guava library
-
----
-**Project Maintainer**: Mark Persever  
-**Contact**: [persever07@gmail.com](mailto:persever07@gmail.com)  
-**GitHub**: [https://github.com/mark-persever](https://github.com/mark-persever)
+- Inspired by Guava's BloomFilter implementation
